@@ -3,7 +3,6 @@ package internal
 import (
 	"bytes"
 	"encoding/json"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -13,53 +12,6 @@ import (
 type Resource interface {
 	Type() string
 	ID() string
-}
-
-type ResourceFactory func(resourceType string) Resource
-
-var Resources = map[string]func() Resource{
-	"Bundle": func() Resource {
-		return &Bundle{}
-	},
-	"Patient": func() Resource {
-		return &Patient{}
-	},
-	"Doctor": func() Resource {
-		return &Doctor{}
-	},
-	"Appointment": func() Resource {
-		return &Appointment{}
-	},
-	"Diagnosis": func() Resource {
-		return &Diagnosis{}
-	},
-}
-
-func unmarshalResource(decoder *json.Decoder) (Resource, error) {
-	var m map[string]json.RawMessage
-	if err := decoder.Decode(&m); err != nil {
-		return nil, errors.Wrap(err, "problem decoding JSON object")
-	}
-	resourceTypeJSON, ok := m["resourceType"]
-	if !ok {
-		return nil, errors.Errorf("resourceType not found")
-	}
-	var resourceType string
-	if err := json.Unmarshal(resourceTypeJSON, &resourceType); err != nil {
-		return nil, errors.Wrap(err, "problem parsing resourceType as string")
-	}
-	resourceFactory, ok := Resources[resourceType]
-	if !ok {
-		return nil, errors.Errorf("unknown resourceType: " + string(resourceType))
-	}
-	resource := resourceFactory()
-
-	mJSON, _ := json.Marshal(m)
-	if err := json.Unmarshal(mJSON, resource); err != nil {
-		return nil, errors.Wrapf(err, "problem creating %s resource from input", resourceType)
-	}
-
-	return reflect.ValueOf(resource).Elem().Interface().(Resource), nil
 }
 
 type (
@@ -161,8 +113,7 @@ func (n *Diagnosis) UnmarshalJSON(data []byte) error {
 	data, _ = json.Marshal(m)
 
 	type alias Diagnosis
-	aliased := (alias)(*n)
-	if err := json.Unmarshal(data, &aliased); err != nil {
+	if err := json.Unmarshal(data, (*alias)(n)); err != nil {
 		return err
 	}
 

@@ -6,6 +6,7 @@ import (
 )
 
 func NewNeo4jStore() Neo4jStore {
+	// TODO accept config input instead of hardcoding
 	driver, err := neo4j.NewDriver("neo4j://localhost:7687", neo4j.AuthToken{})
 	if err != nil {
 		panic(err)
@@ -19,112 +20,26 @@ type Neo4jStore struct {
 	neo4j neo4j.Driver
 }
 
-func (store Neo4jStore) WriteResource(r Resource) error {
-	switch r := r.(type) {
-	case Bundle:
-		// TODO guard against number of resources allowed to be written in one bundle
-		// TODO include all bundled resources in one txn?
-		for _, bundledResource := range r.Resources {
-			if err := store.WriteResource(bundledResource); err != nil {
-				// TODO decide if should error-fast or continue to loop through all remaining resources
-				return errors.Wrap(err, "problem writing resource "+bundledResource.ID())
-			}
-		}
-	case Patient:
-		sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
-		defer sess.Close()
-		_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
-			return tx.Run(
-				`MERGE (a:Patient {
+func (store Neo4jStore) WritePatient(p Patient) error {
+	sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer sess.Close()
+	_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		return tx.Run(
+			`MERGE (a:Patient {
 					id: $id,
 					givenName: $givenName,
 					familyName: $familyName
 				} ) RETURN a`,
-				map[string]interface{}{
-					"id":         r.ID(),
-					"givenName":  r.Name[0].Given[0],
-					"familyName": r.Name[0].Family,
-				},
-			)
-		})
-		if err != nil {
-			return errors.Wrap(err, "problem saving patient "+r.ID())
-		}
-	case Doctor:
-		sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
-		defer sess.Close()
-		_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
-			return tx.Run(
-				`MERGE (a:Doctor {
-					id: $id,
-										givenName: $givenName,
-					familyName: $familyName
-				} ) RETURN a`,
-				map[string]interface{}{
-					"id":         r.ID(),
-					"givenName":  r.Name[0].Given[0],
-					"familyName": r.Name[0].Family,
-				})
-		})
-		if err != nil {
-			return errors.Wrap(err, "problem saving patient "+r.ID())
-		}
-	case Appointment:
-		sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
-		defer sess.Close()
-		_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
-			return tx.Run(
-				`MERGE (a:Appointment {
-					id: $id,
-					status: $status,
-					type: $type
-				} )
-				MERGE (p:Patient { id:$patientId })
-				MERGE (d:Doctor { id:$doctorId })
-				MERGE (a)-[sub:SUBJECT]->(p)
-				MERGE (a)-[actor:ACTOR]->(d)
-				RETURN a`,
-				map[string]interface{}{
-					"id":        r.ID(),
-					"status":    r.Status,
-					"type":      r.Description,
-					"patientId": r.Subject.ResourceID,
-					"doctorId":  r.Actor.ResourceID,
-				},
-			)
-		})
-		if err != nil {
-			return errors.Wrap(err, "problem saving patient "+r.ID())
-		}
-	case Diagnosis:
-		sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
-		defer sess.Close()
-		_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
-			return tx.Run(
-				`
-				MERGE (a:Appointment { id:$appointmentId })
-				MERGE (d:Diagnosis {
-					id: $id,
-					status: $status,
-					name: $name
-				} )
-				MERGE (d)-[:APPOINTMENT]-(a)
-				RETURN d`,
-				map[string]interface{}{
-					"id":            r.ID(),
-					"status":        r.Status,
-					"name":          r.Name,
-					"appointmentId": r.Appointment.ResourceID,
-				},
-			)
-		})
-		if err != nil {
-			return errors.Wrap(err, "problem saving patient "+r.ID())
-		}
-	default:
-		return errors.Errorf("unknown resource type " + r.Type())
+			map[string]interface{}{
+				"id":         p.ID(),
+				"givenName":  p.Name[0].Given[0],
+				"familyName": p.Name[0].Family,
+			},
+		)
+	})
+	if err != nil {
+		return errors.Wrap(err, "problem saving patient "+p.ID())
 	}
-
 	return nil
 }
 
@@ -163,6 +78,28 @@ func (store Neo4jStore) GetPatient(id string) (*Patient, error) {
 			},
 		},
 	}, nil
+}
+
+func (store Neo4jStore) WriteDoctor(d Doctor) error {
+	sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer sess.Close()
+	_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		return tx.Run(
+			`MERGE (a:Doctor {
+					id: $id,
+					givenName: $givenName,
+					familyName: $familyName
+				} ) RETURN a`,
+			map[string]interface{}{
+				"id":         d.ID(),
+				"givenName":  d.Name[0].Given[0],
+				"familyName": d.Name[0].Family,
+			})
+	})
+	if err != nil {
+		return errors.Wrap(err, "problem saving patient "+d.ID())
+	}
+	return nil
 }
 
 func (store Neo4jStore) GetDoctor(id string) (*Doctor, error) {
@@ -238,6 +175,36 @@ func (store Neo4jStore) GetPatientAppointments(patientID string) ([]Appointment,
 }
 
 func (store Neo4jStore) GetPatientNotifications(patientID string) error {
+	return nil
+}
+
+func (store Neo4jStore) WriteAppointment(a Appointment) error {
+	sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer sess.Close()
+	_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		return tx.Run(
+			`MERGE (a:Appointment {
+					id: $id,
+					status: $status,
+					type: $type
+				} )
+				MERGE (p:Patient { id:$patientId })
+				MERGE (d:Doctor { id:$doctorId })
+				MERGE (a)-[sub:SUBJECT]->(p)
+				MERGE (a)-[actor:ACTOR]->(d)
+				RETURN a`,
+			map[string]interface{}{
+				"id":        a.ID(),
+				"status":    a.Status,
+				"type":      a.Description,
+				"patientId": a.Subject.ResourceID,
+				"doctorId":  a.Actor.ResourceID,
+			},
+		)
+	})
+	if err != nil {
+		return errors.Wrap(err, "problem saving patient "+a.ID())
+	}
 	return nil
 }
 
@@ -324,4 +291,33 @@ func processAppointmentRecord(record *neo4j.Record, appointments map[string]*App
 			},
 		}
 	}
+}
+
+func (store Neo4jStore) WriteDiagnosis(d Diagnosis) error {
+	sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer sess.Close()
+	_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		return tx.Run(
+			`
+				MERGE (a:Appointment { id:$appointmentId })
+				MERGE (d:Diagnosis {
+					id: $id,
+					status: $status,
+					name: $name
+				} )
+				MERGE (d)-[:APPOINTMENT]-(a)
+				RETURN d`,
+			map[string]interface{}{
+				"id":            d.ID(),
+				"status":        d.Status,
+				"name":          d.Name,
+				"appointmentId": d.Appointment.ResourceID,
+			},
+		)
+	})
+	if err != nil {
+		return errors.Wrap(err, "problem saving patient "+d.ID())
+	}
+
+	return nil
 }

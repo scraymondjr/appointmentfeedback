@@ -63,7 +63,7 @@ func TestNeo4jStore_WriteResource(t *testing.T) {
 	err := json.Unmarshal([]byte(appointmentJSON), &appointment)
 	require.NoError(t, err)
 
-	err = store.WriteResource(appointment)
+	err = WriteResource(appointment, store)
 	require.NoError(t, err)
 
 	storedAppointment, err := store.GetAppointment(appointment.ID())

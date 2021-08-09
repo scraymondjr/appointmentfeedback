@@ -8,6 +8,6 @@ import (
 
 func Root(store internal.Store) *cobra.Command {
 	var root cobra.Command
-	root.AddCommand(SurveyCommand(store))
+	root.AddCommand(PatientCommand(store))
 	return &root
 }
