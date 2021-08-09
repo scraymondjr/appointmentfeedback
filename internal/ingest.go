@@ -11,7 +11,7 @@ import (
 
 // Ingest reads JSON data from reader and saves resources in the provided store.
 //
-// Returns an error if problem reading from reader, problem
+// Returns an error if problem reading from reader, decoding JSON blob(s), or saving resource.
 func Ingest(data io.Reader, s Store) error {
 	// parse data for resourceType
 

@@ -68,21 +68,44 @@ type (
 		Resources BundledResources `json:"entry"`
 	}
 	BundledResources []Resource
-	Patient          struct {
+
+	Patient struct {
 		ResourceTypeAndID
+		Name []Name `json:"name"` // just take first
+		// TODO all patient fields
 	}
+
+	Name struct {
+		Text   string   `json:"text"`
+		Family string   `json:"family"`
+		Given  []string `json:"given"` // just take first
+	}
+
 	Doctor struct {
 		ResourceTypeAndID
+		Name []Name `json:"name"` // just take first
 	}
+
 	Appointment struct {
 		ResourceTypeAndID
-		Subject Reference `json:"subject"`
-		Actor   Reference `json:"actor"`
+		Status      string     `json:"status"`
+		Description string     `json:"-"` // TODO
+		Subject     Reference  `json:"subject"`
+		Actor       Reference  `json:"actor"`
+		Feedback    *Reference `json:"feedback"`
 	}
+
 	Diagnosis struct {
 		ResourceTypeAndID
 		Status      string    `json:"status"`
+		Name        string    `json:"-"` // TODO
 		Appointment Reference `json:"appointment"`
+	}
+
+	Feedback struct {
+		Recommend int     `json:"recommend"`
+		Explained *bool   `json:"explained"`
+		Feeling   *string `json:"feeling"`
 	}
 
 	ResourceTypeAndID struct {

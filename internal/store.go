@@ -2,8 +2,16 @@ package internal
 
 import "github.com/pkg/errors"
 
-func NewStore() Store {
-	return Store{
+type Store interface {
+	WriteResource(r Resource) error
+	GetPatient(id string) (*Patient, error)
+	GetDoctor(id string) (*Doctor, error)
+	GetPatientAppointments(patientID string) ([]Appointment, error)
+	GetAppointment(id string) (*Appointment, error)
+}
+
+func NewMemStore() MemStore {
+	return MemStore{
 		Patients:     map[string]Patient{},
 		Doctors:      map[string]Doctor{},
 		Appointments: map[string]Appointment{},
@@ -11,7 +19,8 @@ func NewStore() Store {
 	}
 }
 
-type Store struct {
+type MemStore struct {
+	Store
 	Patients     map[string]Patient
 	Doctors      map[string]Doctor
 	Appointments map[string]Appointment
@@ -22,7 +31,7 @@ type Store struct {
 //
 // If patient -> appointment.IsComplete && appointment -> survey == nil, then prompt for survey
 
-func (s Store) WriteResource(r Resource) error {
+func (s MemStore) WriteResource(r Resource) error {
 	switch r := r.(type) {
 	case Bundle:
 		// TODO guard against number of resources allowed to be written in one bundle

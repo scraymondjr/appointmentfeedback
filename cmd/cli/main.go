@@ -4,6 +4,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/scraymondjr/appointment/internal"
+	"github.com/scraymondjr/appointment/internal/commander"
 )
 
 func init() {
@@ -11,7 +14,9 @@ func init() {
 }
 
 func main() {
-	root.Execute()
+	store := internal.NewNeo4jStore()
+	cmd := commander.Root(store)
+	cmd.Execute()
 }
 
 var (

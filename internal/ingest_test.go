@@ -14,7 +14,7 @@ func TestIngest(t *testing.T) {
 	f, err := os.Open("testdata/bundle.json")
 	require.NoError(t, err)
 
-	store := NewStore()
+	store := NewMemStore()
 	err = Ingest(f, store)
 	require.NoError(t, err)
 
