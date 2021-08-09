@@ -93,12 +93,13 @@ type (
 		Subject     Reference  `json:"subject"`
 		Actor       Reference  `json:"actor"`
 		Feedback    *Reference `json:"feedback"`
+		Diagnosis   Diagnosis  `json:"-"`
 	}
 
 	Diagnosis struct {
 		ResourceTypeAndID
 		Status      string    `json:"status"`
-		Name        string    `json:"-"` // TODO
+		Name        string    `json:"code"` // TODO
 		Appointment Reference `json:"appointment"`
 	}
 
@@ -139,6 +140,32 @@ func (bundled *BundledResources) UnmarshalJSON(data []byte) error {
 		resources[i] = resource
 	}
 	*bundled = resources
+	return nil
+}
+
+// UnmarshalJSON unmarshals the code from the json data and sets that as the name.
+func (n *Diagnosis) UnmarshalJSON(data []byte) error {
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+
+	// set name to first coding found in diagnosis
+	for _, coding := range m["code"].(map[string]interface{})["coding"].([]interface{}) {
+		n.Name = coding.(map[string]interface{})["name"].(string)
+		break
+	}
+
+	delete(m, "code")
+
+	data, _ = json.Marshal(m)
+
+	type alias Diagnosis
+	aliased := (alias)(*n)
+	if err := json.Unmarshal(data, &aliased); err != nil {
+		return err
+	}
+
 	return nil
 }
 
