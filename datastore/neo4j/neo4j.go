@@ -1,12 +1,14 @@
-package internal
+package neo4j
 
 import (
 	"github.com/google/uuid"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/pkg/errors"
+
+	. "github.com/scraymondjr/appointment/internal"
 )
 
-func NewNeo4jStore() Neo4jStore {
+func New() Neo4jStore {
 	// TODO accept config input instead of hardcoding
 	driver, err := neo4j.NewDriver("neo4j://localhost:7687", neo4j.AuthToken{})
 	if err != nil {

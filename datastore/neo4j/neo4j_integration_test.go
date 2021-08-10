@@ -1,6 +1,6 @@
 // +build integration
 
-package internal
+package neo4j_test
 
 import (
 	"encoding/json"
@@ -9,14 +9,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/scraymondjr/appointment/datastore/neo4j"
+	"github.com/scraymondjr/appointment/internal"
 )
 
 func TestNeo4jStoreIngest(t *testing.T) {
 	f, err := os.Open("testdata/bundle.json")
 	require.NoError(t, err)
 
-	store := NewNeo4jStore()
-	err = Ingest(f, store)
+	store := neo4j.New()
+	err = internal.Ingest(f, store)
 	require.NoError(t, err)
 
 	// soft-check that all data is saved in store
@@ -36,7 +39,7 @@ func TestNeo4jStoreIngest(t *testing.T) {
 }
 
 func TestNeo4jStore_WriteResource(t *testing.T) {
-	store := NewNeo4jStore()
+	store := neo4j.New()
 
 	appointmentJSON := `{
         "resourceType": "Appointment",
@@ -59,11 +62,11 @@ func TestNeo4jStore_WriteResource(t *testing.T) {
         }
       }`
 
-	var appointment Appointment
+	var appointment internal.Appointment
 	err := json.Unmarshal([]byte(appointmentJSON), &appointment)
 	require.NoError(t, err)
 
-	err = WriteResource(appointment, store)
+	err = internal.WriteResource(appointment, store)
 	require.NoError(t, err)
 
 	storedAppointment, err := store.GetAppointment(appointment.ID())
@@ -72,8 +75,8 @@ func TestNeo4jStore_WriteResource(t *testing.T) {
 
 	storedPatient, err := store.GetPatient("6739ec3e-93bd-11eb-a8b3-0242ac130003")
 	require.NoError(t, err)
-	assert.Equal(t, &Patient{
-		ResourceTypeAndID: ResourceTypeAndID{
+	assert.Equal(t, &internal.Patient{
+		ResourceTypeAndID: internal.ResourceTypeAndID{
 			ResourceID:   "6739ec3e-93bd-11eb-a8b3-0242ac130003",
 			ResourceType: "Patient",
 		},

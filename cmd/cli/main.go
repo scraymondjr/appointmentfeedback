@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/scraymondjr/appointment/internal"
-	"github.com/scraymondjr/appointment/internal/commander"
+	"github.com/scraymondjr/appointment/cmd/cli/commander"
+	"github.com/scraymondjr/appointment/datastore/neo4j"
 )
 
 func init() {
@@ -14,9 +14,11 @@ func init() {
 }
 
 func main() {
-	store := internal.NewNeo4jStore()
+	store := neo4j.New()
 	cmd := commander.Root(store)
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		panic(err)
+	}
 }
 
 var (

@@ -11,10 +11,11 @@ import (
 	"github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 
+	"github.com/scraymondjr/appointment/datastore"
 	"github.com/scraymondjr/appointment/internal"
 )
 
-func PatientCommand(s internal.Store) *cobra.Command {
+func PatientCommand(s datastore.Store) *cobra.Command {
 	return &cobra.Command{
 		Use: "patient patient_id",
 		Run: func(_ *cobra.Command, args []string) {
@@ -25,7 +26,7 @@ func PatientCommand(s internal.Store) *cobra.Command {
 	}
 }
 
-func runPatientPrompts(patientID string, store internal.Store) {
+func runPatientPrompts(patientID string, store datastore.Store) {
 	defer handleExit()
 	p := &Prompt{PatientID: patientID, Store: store}
 	p.Run()
@@ -33,7 +34,7 @@ func runPatientPrompts(patientID string, store internal.Store) {
 
 type Prompt struct {
 	PatientID string
-	Store     internal.Store
+	Store     datastore.Store
 
 	feedback *feedbackSurvey
 }

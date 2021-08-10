@@ -1,4 +1,4 @@
-package internal
+package internal_test
 
 import (
 	"encoding/json"
@@ -8,13 +8,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/scraymondjr/appointment/datastore"
+	. "github.com/scraymondjr/appointment/internal"
 )
 
 func TestIngest(t *testing.T) {
 	f, err := os.Open("testdata/bundle.json")
 	require.NoError(t, err)
 
-	store := NewMemStore()
+	store := datastore.NewMemStore()
 	err = Ingest(f, store)
 	require.NoError(t, err)
 

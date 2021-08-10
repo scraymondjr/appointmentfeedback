@@ -15,6 +15,11 @@ go run cmd/cli/main.go help
 go run cmd/cli/main.go patient ...
 ```
 
+#### Ingest data from file
+```shell
+go run cmd/cli/main.go ingest filepath
+```
+
 ## Neo4j
 
 Start local container instance:

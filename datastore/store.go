@@ -1,4 +1,6 @@
-package internal
+package datastore
+
+import . "github.com/scraymondjr/appointment/internal"
 
 type Store interface {
 	GetPatient(id string) (*Patient, error)
