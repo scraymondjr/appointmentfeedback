@@ -3,6 +3,19 @@
 Service for holding data pertaining to patients and their appointments 
 and allow patients to respond to surveys about their experience.
 
+## Project Components
+
+* Domain Models ([internal/resources.go](internal/resources.go)) - Definitions of domain models, each generically referred to as a `Resource`.
+* Ingestion ([internal/ingest.go](internal/ingest.go)) - Handle ingesting resources from a resource stream.
+* Datastore ([datastore/](datastore/)) - Interface for storing and reading resource objects.
+  * [neo4j datastore](datastore/neo4j/neo4j.go) implemented using [neo4j driver](https://github.com/neo4j/neo4j-go-driver).
+* CLI ([cmd/cli/](cmd/cli/)) - Entry point to CLI for interacting with system.
+  * CLI implemented with [cobra](https://github.com/spf13/cobra) and [go-prompt](https://github.com/c-bata/go-prompt).
+* REST API ([http/](http/)) - Implementation of REST APIs for interacting with system.
+  * REST API implemented using [echo framework](https://github.com/labstack/echo).
+
+![components](doc/images/components.png)
+
 ## Commands
 
 Main CLI entry and help for available commands:
