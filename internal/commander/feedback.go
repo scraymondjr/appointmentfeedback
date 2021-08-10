@@ -75,6 +75,8 @@ func (p *Prompt) execute(in string) {
 		p.appointments()
 	case "givefeedback":
 		p.startFeedback(blocks[1])
+	case "viewfeedback":
+		p.viewFeedback(blocks[1])
 	}
 }
 
@@ -110,6 +112,27 @@ func (p *Prompt) startFeedback(appointmentID string) {
 	fmt.Printf("\nHi %s, on a scale of 1-10, would you recommend Dr %s to a friend or family member? 1 = Would not recommend, 10 = Would strongly recommend\n\n", patient.Name[0].Given[0], doctor.Name[0].Family)
 }
 
+func (p *Prompt) viewFeedback(appointmentID string) {
+	feedback, err := p.Store.GetPatientFeedback(appointmentID)
+	if err != nil {
+		fmt.Printf("Problem getting patient feedback for appointment %s: %v", appointmentID, err)
+		return
+	}
+	if feedback == nil {
+		fmt.Println("No feedback found for appointment ", appointmentID)
+		return
+	}
+
+	appointment, _ := p.Store.GetAppointment(appointmentID)
+	doctor, _ := p.Store.GetDoctor(appointment.Actor.ResourceID)
+
+	printSubmittedFeedback(feedbackSurvey{
+		Appointment: appointment,
+		Doctor:      doctor,
+		Feedback:    *feedback,
+	})
+}
+
 // feedbackPrompt handles prompting when user is providing feedback.
 func (p *Prompt) feedbackPrompt(in string) {
 	switch {
@@ -134,23 +157,29 @@ func (p *Prompt) feedbackPrompt(in string) {
 	default:
 		p.feedback.Feeling = &in
 
-		// save
-		// p.Store.SaveFeedback(p.feedback.Feedback)
-
-		yesNo := "Yes"
-		if !*p.feedback.Explained {
-			yesNo = "No"
+		if err := p.Store.SavePatientFeedback(p.feedback.Appointment.ID(), p.feedback.Feedback); err != nil {
+			fmt.Println("Problem saving patient feedback: " + err.Error())
+			return
 		}
 
 		fmt.Printf("Thanks again! Here’s what we heard:\n\n")
-		fmt.Printf("Your recommendation of Dr %s (1 - 10): %v\n", p.feedback.Doctor.Name[0].Family, p.feedback.Recommend)
-		fmt.Printf("Dr %s explained your diagnosis of %s to you: %s\n", p.feedback.Doctor.Name[0].Family, p.feedback.Appointment.Diagnosis.Name, yesNo)
-		fmt.Printf("Your feelings about your diagnosis: %s\n", *p.feedback.Feeling)
+		printSubmittedFeedback(*p.feedback)
 
 		p.feedback = nil
 	}
 
 	return
+}
+
+func printSubmittedFeedback(feedback feedbackSurvey) {
+	yesNo := "Yes"
+	if !*feedback.Explained {
+		yesNo = "No"
+	}
+
+	fmt.Printf("Your recommendation of Dr %s (1 - 10): %v\n", feedback.Doctor.Name[0].Family, feedback.Recommend)
+	fmt.Printf("Dr %s explained your diagnosis of %s to you: %s\n", feedback.Doctor.Name[0].Family, feedback.Appointment.Diagnosis.Name, yesNo)
+	fmt.Printf("Your feelings about your diagnosis: %s\n", *feedback.Feeling)
 }
 
 // patientDetails prints informatino about the patient.
@@ -203,6 +232,31 @@ func (p *Prompt) completer() func(in prompt.Document) []prompt.Suggest {
 				}
 			}
 			return prompts
+		case "viewfeedback":
+			// TODO (PERF) do this with an API directly from Store?
+			appointments, err := p.Store.GetPatientAppointments(p.PatientID)
+			if err != nil {
+				fmt.Println("problem reading appoints for patient: " + err.Error())
+				return []prompt.Suggest{}
+			}
+
+			var apptsWithFeedback []string
+			for _, appointment := range appointments {
+				feedback, _ := p.Store.GetPatientFeedback(appointment.ID())
+				if feedback != nil {
+					apptsWithFeedback = append(apptsWithFeedback, appointment.ID())
+				}
+			}
+
+			if len(apptsWithFeedback) == 0 {
+				return []prompt.Suggest{}
+			}
+
+			prompts := make([]prompt.Suggest, len(apptsWithFeedback))
+			for i := range apptsWithFeedback {
+				prompts[i] = prompt.Suggest{Text: apptsWithFeedback[i]}
+			}
+			return prompts
 		}
 
 		return prompt.FilterHasPrefix(suggestions, w, true)
@@ -213,6 +267,7 @@ var suggestions = []prompt.Suggest{
 	{"me", "Display info about me"},
 	{"appointments", "List appointments"},
 	{"givefeedback", "Provide feedback about a completed appointment"},
+	{"viewfeedback", "View submitted feedback about an appointment"},
 }
 
 // hack to fix terminal prompt being disabled after exiting

@@ -13,7 +13,7 @@ import (
 // Ingest reads JSON data from reader and saves resources in the provided store.
 //
 // Returns an error if problem reading from reader, decoding JSON blob(s), or saving resource.
-func Ingest(data io.Reader, s resourceWriter) error {
+func Ingest(data io.Reader, s ResourceWriter) error {
 	// parse data for resourceType
 
 	decoder := json.NewDecoder(data)
@@ -31,14 +31,14 @@ func Ingest(data io.Reader, s resourceWriter) error {
 	)
 }
 
-type resourceWriter interface {
+type ResourceWriter interface {
 	WritePatient(Patient) error
 	WriteDoctor(Doctor) error
 	WriteAppointment(Appointment) error
 	WriteDiagnosis(Diagnosis) error
 }
 
-func WriteResource(r Resource, writer resourceWriter) error {
+func WriteResource(r Resource, writer ResourceWriter) error {
 	switch r := r.(type) {
 	case Bundle:
 		// TODO guard against number of resources allowed to be written in one bundle

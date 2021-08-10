@@ -4,6 +4,8 @@ type Store interface {
 	GetPatient(id string) (*Patient, error)
 	GetDoctor(id string) (*Doctor, error)
 	GetPatientAppointments(patientID string) ([]Appointment, error)
+	SavePatientFeedback(appointmentID string, feedback Feedback) error
+	GetPatientFeedback(appointmentID string) (*Feedback, error)
 	GetAppointment(id string) (*Appointment, error)
 }
 

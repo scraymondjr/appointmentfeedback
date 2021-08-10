@@ -6,8 +6,14 @@ import (
 	"github.com/scraymondjr/appointment/internal"
 )
 
-func Root(store internal.Store) *cobra.Command {
+func Root(store interface {
+	internal.Store
+	internal.ResourceWriter
+}) *cobra.Command {
 	var root cobra.Command
-	root.AddCommand(PatientCommand(store))
+	root.AddCommand(
+		PatientCommand(store),
+		IngestCommand(store),
+	)
 	return &root
 }

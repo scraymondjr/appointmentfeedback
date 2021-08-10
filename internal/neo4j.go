@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/google/uuid"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"github.com/pkg/errors"
 )
@@ -174,6 +175,60 @@ func (store Neo4jStore) GetPatientAppointments(patientID string) ([]Appointment,
 	return apps, nil
 }
 
+func (store Neo4jStore) SavePatientFeedback(appointmentID string, feedback Feedback) error {
+	sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer sess.Close()
+	_, err := sess.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		return tx.Run(
+			`MATCH (a:Appointment {id:$appointmentID} )
+			MERGE (a)-[:FEEDBACK]->(:Feedback { id:$id, recommend:$recommend, explained:$explained, feeling:$feeling })
+			RETURN a`,
+			map[string]interface{}{
+				"appointmentID": appointmentID,
+				"id":            uuid.New().String(),
+				"recommend":     feedback.Recommend,
+				"explained":     *feedback.Explained,
+				"feeling":       *feedback.Feeling,
+			},
+		)
+	})
+	if err != nil {
+		return errors.Wrap(err, "problem saving feedback for appointment "+appointmentID)
+	}
+	return nil
+}
+
+func (store Neo4jStore) GetPatientFeedback(appointmentID string) (*Feedback, error) {
+	sess := store.neo4j.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+	defer sess.Close()
+
+	record, err := sess.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		result, err := tx.Run(`
+		MATCH (:Appointment { id:$appointmentId })-[:FEEDBACK]->(f:Feedback)
+		RETURN f
+		`, map[string]interface{}{
+			"appointmentId": appointmentID,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return result.Single()
+	})
+	if record == nil || err != nil {
+		return nil, err
+	}
+
+	feedbackNode := record.(*neo4j.Record).Values[0].(neo4j.Node)
+	explained := feedbackNode.Props["explained"].(bool)
+	feeling := feedbackNode.Props["feeling"].(string)
+	return &Feedback{
+		Recommend: int(feedbackNode.Props["recommend"].(int64)),
+		Explained: &explained,
+		Feeling:   &feeling,
+	}, nil
+}
+
 func (store Neo4jStore) GetPatientNotifications(patientID string) error {
 	return nil
 }
@@ -203,7 +258,7 @@ func (store Neo4jStore) WriteAppointment(a Appointment) error {
 		)
 	})
 	if err != nil {
-		return errors.Wrap(err, "problem saving patient "+a.ID())
+		return errors.Wrap(err, "problem saving appointment "+a.ID())
 	}
 	return nil
 }
@@ -259,7 +314,10 @@ func processAppointmentRecord(record *neo4j.Record, appointments map[string]*App
 
 	relationship, _ := record.Get("r")
 	node, _ := record.Get("n")
-	nodeID := node.(neo4j.Node).Props["id"].(string)
+	var nodeID string
+	if id, ok := node.(neo4j.Node).Props["id"].(string); ok {
+		nodeID = id
+	}
 
 	switch relationship.(neo4j.Relationship).Type {
 	case "SUBJECT":
