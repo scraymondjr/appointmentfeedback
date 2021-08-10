@@ -15,6 +15,15 @@ go run cmd/cli/main.go help
 go run cmd/cli/main.go patient ...
 ```
 
+**givefeedback**
+![givefeedback](doc/images/givefeedback.png)
+
+**viewfeedback**
+![viewfeedback](doc/images/viewfeedback.png)
+
+**appointments**
+![appointments](doc/images/appointments.png)
+
 #### Ingest data from file
 ```shell
 go run cmd/cli/main.go ingest filepath
