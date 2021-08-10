@@ -13,10 +13,10 @@ import (
 // Ingest reads JSON data from reader and saves resources in the provided store.
 //
 // Returns an error if problem reading from reader, decoding JSON blob(s), or saving resource.
-func Ingest(data io.Reader, s ResourceWriter) error {
+func Ingest(reader io.Reader, writer ResourceWriter) error {
 	// parse data for resourceType
 
-	decoder := json.NewDecoder(data)
+	decoder := json.NewDecoder(reader)
 
 	resource, err := unmarshalResource(decoder)
 	if err != nil {
@@ -26,7 +26,7 @@ func Ingest(data io.Reader, s ResourceWriter) error {
 	// save resource
 
 	return errors.Wrap(
-		WriteResource(resource, s),
+		WriteResource(resource, writer),
 		"problem saving resource "+resource.ID(),
 	)
 }
